@@ -4,7 +4,7 @@
 
 Live app: https://marketmindfusion.github.io
 
-This document gives a concise, handover‑ready overview of the product, architecture, and expectations for future development.
+This document gives a concise, handover‑ready overview of the product, architecture, and expectations for future development. All installation, environment, and deployment details are collected after the app summary.
 
 ---
 
@@ -17,7 +17,139 @@ MarketMind Fusion combines Supabase, OpenAI, and a React/Vite frontend to help p
 
 ---
 
-### 2. Core Use Cases
+### 2. Installation & Detailed Setup
+
+This section explains how to get a fresh environment running, with links to the tools we rely on.
+
+#### 2.1. Prerequisites
+
+- Node.js (LTS) – download from https://nodejs.org  
+- npm (bundled with Node.js)  
+- Git – https://git-scm.com  
+- Supabase account and project – https://supabase.com  
+- Supabase CLI – https://supabase.com/docs/guides/cli  
+- OpenAI API key – https://platform.openai.com
+
+Optional but recommended:
+
+- VS Code – https://code.visualstudio.com  
+- GitHub account for collaboration – https://github.com
+
+#### 2.2. Clone and Install Dependencies
+
+```bash
+git clone https://github.com/KUSH23/marketmindfusion.git
+cd marketmindfusion
+
+# install JS/TS dependencies
+npm install
+```
+
+If you are using `bun`, you can alternatively run:
+
+```bash
+bun install
+```
+
+#### 2.3. Frontend Environment Variables (`.env`)
+
+Create a `.env` file in the project root (same level as `package.json`) and define:
+
+```bash
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_public_key
+```
+
+How to find these:
+
+- In the Supabase dashboard, go to **Project Settings → API**.  
+- Copy the **Project URL** into `VITE_SUPABASE_URL`.  
+- Copy the **anon public** key into `VITE_SUPABASE_ANON_KEY`.
+
+You can add additional `VITE_*` keys later if needed by the frontend.
+
+#### 2.4. Link to Your Supabase Project & Run Migrations
+
+From the project root:
+
+```bash
+supabase login
+```
+
+```bash
+supabase link
+```
+
+Follow the CLI instructions (you will need your project reference from the Supabase dashboard). Once linked, apply the existing database schema:
+
+```bash
+supabase db push
+```
+
+This runs the SQL migrations in `supabase/migrations/` against your project and sets up the tables expected by the app.
+
+For more details, see: https://supabase.com/docs/guides/cli/local-development
+
+#### 2.5. Configure Supabase Function Environment Variables
+
+In the Supabase dashboard:
+
+1. Go to **Project → Edge Functions → Secrets**.  
+2. Add the following variables:
+
+	- `OPENAI_API_KEY` – your key from https://platform.openai.com/account/api-keys
+	- (Optional) `OPENAI_MODEL`, `OPENAI_MAX_TOKENS`, `OPENAI_RETRY_DELAY_MS`, `OPENAI_FALLBACK_MODEL`  
+	- `RESEND_API_KEY` – for using send survey email (https://resend.com/)  
+
+3. Save and redeploy functions after changes.
+
+You can also use a local `.env` inside `supabase/` when running functions locally with `supabase functions serve`. See the Supabase docs: https://supabase.com/docs/guides/functions
+
+#### 2.6. Running the Frontend Locally
+
+```bash
+npm run dev
+```
+
+This starts the Vite dev server (by default on `http://localhost:5173`). The app will use the Supabase project configured by your `VITE_*` variables.
+
+#### 2.7. Running Supabase Edge Functions Locally
+
+From the `supabase/` directory:
+
+```bash
+cd supabase
+supabase functions serve analyze-product
+```
+
+You can swap `analyze-product` for any other function folder name (`generate-hypotheses`, `generate-survey-questions`, etc.). The CLI will expose a local URL you can point the frontend to during development if needed.
+
+#### 2.8. Deploying Edge Functions
+
+```bash
+cd supabase
+supabase functions deploy analyze-product
+supabase functions deploy generate-hypotheses
+# ...deploy other functions as needed
+```
+
+Documentation: https://supabase.com/docs/guides/functions/deploy
+
+#### 2.9. Building the Frontend for Production
+
+To create a static production build (used for GitHub Pages):
+
+```bash
+npm run build
+```
+
+This outputs a static bundle (by default into `dist/`). You can then publish this to GitHub Pages or any static hosting. The current live deployment is at https://marketmindfusion.github.io.
+
+For Vite deployment details, see: https://vitejs.dev/guide/static-deploy.html
+
+---
+
+### 3. Core Use Cases
 
 - Capture a new product or feature idea and get:
 	- Structured product analysis (category, target audience, trends, positioning).
@@ -37,7 +169,7 @@ MarketMind Fusion combines Supabase, OpenAI, and a React/Vite frontend to help p
 
 ---
 
-### 3. Users & Personas (High‑Level)
+### 4. Users & Personas (High‑Level)
 
 1. **Product Manager / Founder** – wants quick validation and evidence for product decisions.
 2. **Marketing / Growth Manager** – needs audience understanding, angles, and assets to run campaigns.
@@ -47,7 +179,7 @@ The interface is optimized for these users: guided flows, clear CTAs, and sharea
 
 ---
 
-### 4. Frontend Architecture (React + Vite)
+### 5. Frontend Architecture (React + Vite)
 
 **Tech:** React, TypeScript, Vite, Tailwind/shadcn‑style UI components.
 
@@ -79,7 +211,7 @@ Routing is page‑based, with access to certain routes guarded by `ProtectedRout
 
 ---
 
-### 5. Backend Architecture (Supabase + Edge Functions)
+### 6. Backend Architecture (Supabase + Edge Functions)
 
 **Supabase project** lives in `supabase/`:
 
@@ -113,83 +245,7 @@ Supabase Auth is used for login; the frontend calls these Edge Functions via HTT
 
 ---
 
-### 6. Environment & Configuration
-
-**Frontend (`.env` for Vite)**
-
-Typical variables (names may vary in your setup):
-
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-- Any other `VITE_*` keys needed by the client.
-
-**Supabase Functions (project settings → Functions → Environment Variables)**
-
-- `OPENAI_API_KEY` – required for all AI Edge Functions.
-- Optional per‑function or global knobs (if used):
-	- `OPENAI_MODEL`
-	- `OPENAI_MAX_TOKENS`
-	- `OPENAI_RETRY_DELAY_MS`
-	- `OPENAI_FALLBACK_MODEL`
-- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` – for functions such as `match-persona-contacts` that need privileged DB access.
-
-Secrets are **not** checked into the repo. They must be set in Supabase dashboard and/or local `.env` files for CLI testing.
-
----
-
-### 7. Development & Setup (for Engineers)
-
-**Prerequisites**
-
-- Node.js (LTS) and npm.  
-- Supabase CLI (`npm install -g supabase`).  
-- An OpenAI API key.  
-- A Supabase project.
-
-**Getting Started**
-
-```bash
-git clone https://github.com/KUSH23/marketmindfusion.git
-cd marketmindfusion
-
-# install dependencies
-npm install
-
-# configure frontend env vars (.env)
-# set VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, etc.
-
-# link to your Supabase project (one‑time)
-supabase link
-
-# apply database migrations
-supabase db push
-```
-
-**Running locally**
-
-```bash
-# start Vite dev server
-npm run dev
-
-# run a specific Edge Function locally (from project root)
-cd supabase
-supabase functions serve analyze-product
-```
-
-**Deploying Edge Functions**
-
-```bash
-cd supabase
-supabase functions deploy analyze-product
-supabase functions deploy generate-hypotheses
-# ...deploy other functions as needed
-```
-
-The frontend is deployed separately via GitHub Pages at https://marketmindfusion.github.io.
-
----
-
-### 8. Non‑Functional Expectations
+### 7. Non‑Functional Expectations
 
 - **Performance** – typical AI requests should complete in a few seconds; UI must show clear loading and error states.
 - **Reliability** – Edge Functions log errors and return JSON with explicit `error` messages on failure.
@@ -198,7 +254,7 @@ The frontend is deployed separately via GitHub Pages at https://marketmindfusion
 
 ---
 
-### 9. Handover Notes
+### 8. Handover Notes
 
 - This repository already contains:
 	- A working React/Vite UI with multiple research and marketing workflows.
@@ -210,6 +266,26 @@ The frontend is deployed separately via GitHub Pages at https://marketmindfusion
 	- Collaboration features and billing if desired.
 
 For questions or further context, review the `src/pages/` and `supabase/functions/` directories, then explore the live app at https://marketmindfusion.github.io.
+
+---
+
+### 8. Installation & Detailed Setup
+
+This section explains how to get a fresh environment running, with links to the tools we rely on.
+
+#### 8.1. Prerequisites
+
+- Node.js (LTS) – download from https://nodejs.org  
+- npm (bundled with Node.js)  
+- Git – https://git-scm.com  
+- Supabase account and project – https://supabase.com  
+- Supabase CLI – https://supabase.com/docs/guides/cli  
+- OpenAI API key – https://platform.openai.com
+
+Optional but recommended:
+
+- VS Code – https://code.visualstudio.com  
+- GitHub account for collaboration – https://github.com
 
 
 
