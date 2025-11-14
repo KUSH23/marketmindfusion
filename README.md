@@ -269,23 +269,6 @@ For questions or further context, review the `src/pages/` and `supabase/function
 
 ---
 
-### 8. Installation & Detailed Setup
-
-This section explains how to get a fresh environment running, with links to the tools we rely on.
-
-#### 8.1. Prerequisites
-
-- Node.js (LTS) – download from https://nodejs.org  
-- npm (bundled with Node.js)  
-- Git – https://git-scm.com  
-- Supabase account and project – https://supabase.com  
-- Supabase CLI – https://supabase.com/docs/guides/cli  
-- OpenAI API key – https://platform.openai.com
-
-Optional but recommended:
-
-- VS Code – https://code.visualstudio.com  
-- GitHub account for collaboration – https://github.com
 
 
 
