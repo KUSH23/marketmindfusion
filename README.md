@@ -153,7 +153,7 @@ For Vite deployment details, see: https://vitejs.dev/guide/static-deploy.html
 
 This section collects the prompt templates and system/user message patterns used in the Supabase Edge Functions. Keep these templates in sync with the `supabase/functions/*/index.ts` files. Use the variables shown in each template when invoking via the frontend.
 
-Full canonical prompts and raw templates: `prompts.md`
+Full canonical prompts and raw templates: `PROMPTS.md`
 
 - **analyze-product**
 	- System prompt (role: system): marketing intelligence analyst asking for a strict JSON object with keys: `category`, `targetAudience`, `trends`, `positioning`, `suggestedName`.
@@ -333,7 +333,7 @@ Supabase Auth is used for login; the frontend calls these Edge Functions via HTT
 - **Strict JSON contracts**: Most functions call `JSON.parse` on the model output and expect specific fields. If the model returns extra text, comments, or malformed JSON, the function will throw a 500 error.
 	- Recommended actions:
 		- Keep prompts unchanged unless you also update the parsing logic.
-		- If you change the expected JSON shape, update both the function code and `prompts.md` / Prompt Library.
+		- If you change the expected JSON shape, update both the function code and `PROMPTS.md` / Prompt Library.
 		- When debugging, log the raw `content` string from the model to see what broke.
 - **Schema constraints vs AI output**: Some tables (for example, competitive analysis, personas) expect non-null fields such as `recommendations`. If the AI omits them, inserts/updates may fail.
 	- Recommended actions:
