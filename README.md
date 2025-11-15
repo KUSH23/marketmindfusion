@@ -149,7 +149,84 @@ For Vite deployment details, see: https://vitejs.dev/guide/static-deploy.html
 
 ---
 
-### 3. Core Use Cases
+### 3. Prompt Library
+
+This section collects the prompt templates and system/user message patterns used in the Supabase Edge Functions. Keep these templates in sync with the `supabase/functions/*/index.ts` files. Use the variables shown in each template when invoking via the frontend.
+
+Full canonical prompts and raw templates: `prompts.md`
+
+- **analyze-product**
+	- System prompt (role: system): marketing intelligence analyst asking for a strict JSON object with keys: `category`, `targetAudience`, `trends`, `positioning`, `suggestedName`.
+	- User prompt (role: user): the raw `productDescription` text.
+	- Response format: valid JSON, example structure:
+		{
+			"category": "...",
+			"targetAudience": "...",
+			"trends": "...",
+			"positioning": "...",
+			"suggestedName": "..."
+		}
+	- Notes: Always validate the JSON and required fields (`category`, `targetAudience`) before persisting.
+
+- **generate-hypotheses**
+	- System prompt: two modes (`expert` vs default). Both require EXACT JSON with `hypotheses` array; each hypothesis contains `statement`, `method`, `methodTechnical`, `decisionRule`, `confidence`.
+	- User prompt pattern:
+		`Product: ${productName}\n\nDescription: ${productDescription}\n\nGenerate 3 hypotheses.`
+	- Notes: Mode controls tone/rigor. Function normalizes fields (e.g., `idea` -> `statement`) after parsing.
+
+- **generate-survey-questions**
+	- System prompt: expert survey designer with allowed question types: `text`, `multiple_choice`, `rating` and guidelines for question ordering and option counts.
+	- User prompt includes `surveyTitle`, optional `surveyDescription`, optional `personaInfo`, and `questionCount`.
+	- Response format: JSON `{ "questions": [ { "text", "type", "required", "options"? } ] }`.
+	- Notes: For `multiple_choice` include 4–6 options; for `rating` include endpoints.
+
+- **generate-research-plan**
+	- System prompt: marketing research strategist asking for strict JSON plan with `targetAudience`, `sample`, `methodology`, `timeline`, `budget`.
+	- User prompt composes `productName`, `productDescription`, and aggregated `hypotheses` statements.
+	- Notes: This function may use larger token limits and shared OpenAI helper; check token/finish_reason for truncated responses.
+
+- **generate-competitive-analysis**
+	- System prompt: competitive intelligence analyst expecting JSON with `analyses` array where each item has SWOT lists, `positioning`, and `recommendations` object.
+	- User prompt provides `productName`, `productDescription`, and `competitors` (or instructs AI to pick top competitors).
+	- Notes: Uses tool-calling style; ensure `recommendations` exists for every analysis row before DB insertion.
+
+- **generate-marketing-copy**
+	- System prompt: marketing copywriter; requires JSON `variants` array with `variant_name`, `headline`, `body_text`, and `cta`.
+	- User prompt includes `productName`, `productDescription`, `targetAudience`, and `contentType` (ad_copy, email, landing_page, social_post, blog_post).
+	- Notes: Each variant should use distinct angles (e.g., problem-focused, benefit-focused, social-proof).
+
+- **generate-personas**
+	- System prompt: market researcher expecting `personas` array with detailed demographic and psychographic fields.
+	- User prompt includes `productName`, `productDescription`, and `researchData` (JSON string of research findings).
+	- Notes: The function sanitizes personas to ensure required fields have defaults.
+
+- **analyze-survey-responses**
+	- System prompt: sentiment analysis expert; returns overall sentiment, themes, pain_points, positive_highlights, actionable_insights, and per-response sentiment.
+	- User prompt consists of enumerated `textResponses` to analyze.
+	- Response format: JSON with keys `overall_sentiment`, `sentiment_score`, `key_themes`, `pain_points`, `positive_highlights`, `actionable_insights`, `individual_sentiments`.
+
+- **predict-ab-test**
+	- System prompt: marketing analyst/data scientist. Expects JSON with `predicted_winner`, `confidence_score`, `predicted_metrics` for both variants, `key_factors`, and `recommendations`.
+	- User prompt contains `testName`, serialized `variantA`, `variantB`, `targetAudience`, and optional `historicalData`.
+
+- **generate-campaign-image**
+	- Prompt (images API): combination of `imageTypePrompts` (hero, ad_banner, social_media, product_shot) and `styleModifiers` (modern, vibrant, professional, creative), plus optional `brandColors`.
+	- Returned payload includes the original `prompt` (stored for audit) and Base64 image data.
+
+- **match-persona-contacts**
+	- System prompt: matching expert with clear scoring rules (prioritize psychographics/interests over demographics). Expect an array of `{ contact_id, match_score, reasons }`.
+	- User prompt includes full persona details and a list of contacts (each with demographics, interests, behavior).
+	- Notes: Function filters and enriches matches; keep `minMatchScore` configurable.
+
+General notes for the Prompt Library:
+
+- Store canonical templates in code and in this README to make future audits easier.  
+- Respect the strict JSON response contracts — the Edge Functions parse and JSON.parse the AI content directly.  
+- If you need to change formats, update both the function and the README template together.
+
+---
+
+### 4. Core Use Cases
 
 - Capture a new product or feature idea and get:
 	- Structured product analysis (category, target audience, trends, positioning).
@@ -169,7 +246,7 @@ For Vite deployment details, see: https://vitejs.dev/guide/static-deploy.html
 
 ---
 
-### 4. Users & Personas (High‑Level)
+### 5. Users & Personas (High‑Level)
 
 1. **Product Manager / Founder** – wants quick validation and evidence for product decisions.
 2. **Marketing / Growth Manager** – needs audience understanding, angles, and assets to run campaigns.
@@ -179,7 +256,7 @@ The interface is optimized for these users: guided flows, clear CTAs, and sharea
 
 ---
 
-### 5. Frontend Architecture (React + Vite)
+### 6. Frontend Architecture (React + Vite)
 
 **Tech:** React, TypeScript, Vite, Tailwind/shadcn‑style UI components.
 
@@ -211,7 +288,7 @@ Routing is page‑based, with access to certain routes guarded by `ProtectedRout
 
 ---
 
-### 6. Backend Architecture (Supabase + Edge Functions)
+### 7. Backend Architecture (Supabase + Edge Functions)
 
 **Supabase project** lives in `supabase/`:
 
@@ -245,7 +322,29 @@ Supabase Auth is used for login; the frontend calls these Edge Functions via HTT
 
 ---
 
-### 7. Non‑Functional Expectations
+### 8. Known Issues & Limitations
+
+- **Edge Function returned a non-2xx status code**: Many Supabase Edge Functions depend on OpenAI. If the model name is invalid, the account is rate-limited, or the response exceeds token limits, OpenAI can return 4xx/5xx responses. These surface in the frontend as a generic non-2xx error.
+	- Recommended actions:
+		- Check that `OPENAI_API_KEY` is valid and has quota.
+		- Confirm the model configured (for example, `gpt-4.1-mini`, `gpt-4o-mini`, `gpt-image-1`) exists and is enabled for your account.
+		- Reduce prompt size or complexity if you hit token length issues.
+		- Inspect Supabase Edge Function logs for the exact `OpenAI API error: <status>` message.
+- **Strict JSON contracts**: Most functions call `JSON.parse` on the model output and expect specific fields. If the model returns extra text, comments, or malformed JSON, the function will throw a 500 error.
+	- Recommended actions:
+		- Keep prompts unchanged unless you also update the parsing logic.
+		- If you change the expected JSON shape, update both the function code and `prompts.md` / Prompt Library.
+		- When debugging, log the raw `content` string from the model to see what broke.
+- **Schema constraints vs AI output**: Some tables (for example, competitive analysis, personas) expect non-null fields such as `recommendations`. If the AI omits them, inserts/updates may fail.
+	- Recommended actions:
+		- Add server-side defaulting/sanitization before inserts (for example, ensure `recommendations` is at least an object with default keys).
+		- Relax DB constraints only if you are comfortable with partial data.
+
+Users are advised to review the model names, token limits, and JSON contracts in the Supabase functions before deploying to production to avoid these errors.
+
+---
+
+### 9. Non‑Functional Expectations
 
 - **Performance** – typical AI requests should complete in a few seconds; UI must show clear loading and error states.
 - **Reliability** – Edge Functions log errors and return JSON with explicit `error` messages on failure.
@@ -254,7 +353,7 @@ Supabase Auth is used for login; the frontend calls these Edge Functions via HTT
 
 ---
 
-### 8. Handover Notes
+### 10. Handover Notes
 
 - This repository already contains:
 	- A working React/Vite UI with multiple research and marketing workflows.
@@ -266,8 +365,6 @@ Supabase Auth is used for login; the frontend calls these Edge Functions via HTT
 	- Collaboration features and billing if desired.
 
 For questions or further context, review the `src/pages/` and `supabase/functions/` directories, then explore the live app at https://marketmindfusion.github.io.
-
----
 
 
 
