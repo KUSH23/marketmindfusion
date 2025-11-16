@@ -45,7 +45,7 @@ serve(async (req) => {
         const contact = match.contact;
         
         // Get the request origin to construct survey URL
-        const origin = req.headers.get('origin') || req.headers.get('referer') || 'https://b539ff29-d694-46a0-8de8-b2a5a9129fa4.lovable.app';
+        const origin = req.headers.get('origin') || req.headers.get('referer') || 'https://marketmindfusion.github.io';
         const baseUrl = origin.replace(/\/$/, '');
         const surveyUrl = `${baseUrl}/survey/respond?survey=${surveyId}&contact=${contact.id}`;
 

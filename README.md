@@ -15,6 +15,8 @@ This document gives a concise, handover‑ready overview of the product, archite
 
 MarketMind Fusion combines Supabase, OpenAI, and a React/Vite frontend to help product and marketing teams go from product description to research and campaign outputs in minutes rather than weeks.
 
+Full PRD: `PRD.md`
+
 ---
 
 ### 2. Installation & Detailed Setup
@@ -353,16 +355,6 @@ Users are advised to review the model names, token limits, and JSON contracts in
 
 ---
 
-### 10. Handover Notes
-
-- This repository already contains:
-	- A working React/Vite UI with multiple research and marketing workflows.
-	- A Supabase project structure with migrations.
-	- A suite of AI‑backed Supabase Edge Functions.
-- Future work can focus on:
-	- Hardening error handling and rate limiting around OpenAI.  
-	- Extending analytics and reporting (e.g., richer `DataInsights`).  
-	- Collaboration features and billing if desired.
 
 For questions or further context, review the `src/pages/` and `supabase/functions/` directories, then explore the live app at https://marketmindfusion.github.io.
 
